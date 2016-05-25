@@ -63,7 +63,7 @@ LABEL_CVS = {'LabelKFold': LabelKFold,
 
 def cross_val_score(estimator, X, y=None, labels=None, scoring=None, cv=None,
                     n_jobs=1, verbose=0, fit_params=None,
-                    pre_dispatch='2*n_jobs'):
+                    pre_dispatch='2*n_jobs', return_fitted=False):
     """Evaluate a score by cross-validation
 
     Read more in the :ref:`User Guide <cross_validation>`.
@@ -131,10 +131,16 @@ def cross_val_score(estimator, X, y=None, labels=None, scoring=None, cv=None,
             - A string, giving an expression as a function of n_jobs,
               as in '2*n_jobs'
 
+    return_fitted : bool, default=False
+        Documentation TODO
+
     Returns
     -------
     scores : array of float, shape=(len(list(cv)),)
         Array of scores of the estimator for each run of the cross validation.
+
+    fitted_estimator : estimator object
+        Documentation TODO
 
     Examples
     --------
@@ -161,16 +167,29 @@ def cross_val_score(estimator, X, y=None, labels=None, scoring=None, cv=None,
     # independent, and that it is pickle-able.
     parallel = Parallel(n_jobs=n_jobs, verbose=verbose,
                         pre_dispatch=pre_dispatch)
-    scores = parallel(delayed(_fit_and_score)(clone(estimator), X, y, scorer,
-                                              train, test, verbose, None,
-                                              fit_params)
+    scores_with_estimator = parallel(delayed(_fit_and_score)(
+                                             clone(estimator), X, y, scorer,
+                                             train, test, verbose, None,
+                                             fit_params,
+                                             return_fitted=return_fitted
+                                             )
                       for train, test in cv.split(X, y, labels))
-    return np.array(scores)[:, 0]
+
+    # Last element in retvals will be fitted estimator if return_fitted is True
+    if return_fitted:
+        estimators = map(lambda retvals: retvals.pop(), scores_with_estimator)
+
+    scores = scores_with_estimator
+    test_scores = np.array(scores)[:, 0]
+    if return_fitted:
+        return test_scores, estimators
+    return test_scores
 
 
 def _fit_and_score(estimator, X, y, scorer, train, test, verbose,
                    parameters, fit_params, return_train_score=False,
-                   return_parameters=False, error_score='raise'):
+                   return_parameters=False, error_score='raise',
+                   return_fitted=False):
     """Fit estimator and compute scores for a given dataset split.
 
     Parameters
@@ -232,6 +251,9 @@ def _fit_and_score(estimator, X, y, scorer, train, test, verbose,
 
     parameters : dict or None, optional
         The parameters that have been evaluated.
+
+    fitted_estimator :
+        Documentation TODO
     """
     if verbose > 1:
         if parameters is None:
@@ -292,6 +314,8 @@ def _fit_and_score(estimator, X, y, scorer, train, test, verbose,
     ret.extend([test_score, _num_samples(X_test), scoring_time])
     if return_parameters:
         ret.append(parameters)
+    if return_fitted:
+        ret.append(estimator)
     return ret
 
 
