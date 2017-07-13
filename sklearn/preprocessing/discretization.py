@@ -8,11 +8,11 @@ import numbers
 import numpy as np
 import warnings
 
-from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.preprocessing.data import _transform_selected
-from sklearn.utils.validation import check_array
-from sklearn.utils.validation import check_is_fitted
-from sklearn.utils.validation import column_or_1d
+from ..base import BaseEstimator, TransformerMixin
+from .data import _transform_selected
+from ..utils.validation import check_array
+from ..utils.validation import check_is_fitted
+from ..utils.validation import column_or_1d
 
 
 class KBinsDiscretizer(BaseEstimator, TransformerMixin):
